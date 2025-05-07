@@ -1,68 +1,160 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# WHOIS Lookup Service
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Невеликий REST-API та веб-інтерфейс для отримання WHOIS-інформації про домен.
+Розгортається за допомогою Docker Compose (PHP-FPM + Nginx) та побудований на Laravel.
 
-## About Laravel
+---
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## 📂 Структура проекту
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+```
+.
+├── docker
+│   ├── php
+│   │   └── Dockerfile               # PHP-FPM образ з розширеннями й Composer
+│   └── nginx
+│       ├── Dockerfile               # Nginx на Alpine
+│       └── default.conf             # Конфіг для Laravel (root → public)
+├── config
+│   └── whois.php                    # Ассоціативний масив TLD → WHOIS-сервер
+├── docker-compose.yml               # Опис сервісів php та nginx
+├── routes
+│   ├── api.php                      # POST /api/whois
+│   └── web.php                      # GET / → форма введення домену
+├── app
+│   ├── Http
+│   │   ├── Controllers
+│   │   │   └── WhoIsController.php  # Логіка lookup через fsockopen()
+│   │   └── Requests
+│   │       └── LookupWhoIsRequest.php  # Правила валідації domain
+│   └── …                            # Стандартний каркас Laravel
+├── resources
+│   └── views
+│       └── whois
+│           └── form.blade.php       # HTML + JS форма + кнопка Download JSON
+└── README.md                        # Опис проекту
+```
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+---
 
-## Learning Laravel
+## ⚙️ Налаштування середовища
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+1. **Клонуємо репозиторій** та переходимо в папку проекту:
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+   ```bash
+   git clone git@github.com:USER/REPO.git
+   cd REPO
+   ```
+2. **Запускаємо Docker-стек**:
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+   ```bash
+   docker-compose up -d --build
+   ```
+3. Веб-інтерфейс доступний за адресою:
 
-## Laravel Sponsors
+   ```
+   http://localhost:8085
+   ```
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+---
 
-### Premium Partners
+## 🚀 Як користуватися
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
+### Веб-інтерфейс
 
-## Contributing
+1. Введіть домен у полі (наприклад, `example.com`).
+2. Натисніть **Перевірити**.
+3. Отримаєте “сиру” WHOIS-відповідь у блоці `<pre>`.
+4. Натисніть кнопку **Download JSON** для збереження повного JSON-об’єкта.
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+### REST-API
 
-## Code of Conduct
+* **Маршрут**: `POST /api/whois`
+* **Тіло запиту** (JSON):
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+  ```json
+  { "domain": "example.com" }
+  ```
+* **Успішна відповідь** (HTTP 200):
 
-## Security Vulnerabilities
+  ```json
+  {
+    "domain": "example.com",
+    "server": "whois.verisign-grs.com",
+    "whois": "…WHOIS-текст…"
+  }
+  ```
+* **Помилки**:
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+  * **422 Validation Error** (неправильний формат domain)
+  * **400 Bad Request** (TLD не підтримується)
+  * **503 Service Unavailable** (не вдалося з’єднатися)
 
-## License
+---
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
-# test_whois
-# test_whois
+## 🔍 Реалізація
+
+1. **Docker + Nginx**
+
+   * PHP-FPM образ із базовими розширеннями (GD, PDO, mbstring, opcache, Xdebug).
+   * Nginx на Alpine, який проксить запити `.php` на `php:9000` і віддає статику.
+
+2. **Laravel**
+
+   * **Контролер `WhoIsController`**:
+
+     * `form()` → повертає view з формою.
+     * `lookup()` → обробляє запит, валідує через `LookupWhoIsRequest`, визначає WHOIS-сервер за конфігом, відкриває сокет до порту 43, читає відповідь і віддає JSON.
+   * **FormRequest `LookupWhoIsRequest`**:
+
+     * Правило: `required|string|regex:/^[a-zA-Z0-9\.-]+\.[a-zA-Z]{2,}$/`.
+     * При помилці валідації повертає JSON 422.
+   * **Конфіг `config/whois.php`**:
+
+     * Ассоціативний масив усіх TLD із відповідними WHOIS-серверами (з переліку Nir Sofer).
+   * **Blade-шаблон**:
+
+     * Форма для введення домену, JS-функція `fetch` → `/api/whois`.
+     * Генерація `Blob`–файла та кнопка **Download JSON**.
+
+3. **Обробка особливих випадків**
+
+   * Автоматичний вибір серверів для SLD (наприклад `com.ua`, `org.ua` тощо) за двома елементами домену.
+   * Виключаємо префікс `=` тільки для `ru`; для `ua` та інших надсилаємо простий `domain\r\n`.
+
+---
+
+## 🔧 Додаткові команди
+
+* **Перезапуск Nginx** (щоб перечитати конфіг):
+
+  ```bash
+  docker-compose restart nginx
+  ```
+
+  або
+
+  ```bash
+  docker-compose exec nginx nginx -s reload
+  ```
+* **Створення контролера під своїм UID/GID**:
+
+  ```bash
+  docker-compose exec --user $(id -u):$(id -g) php php artisan make:controller WhoIsController
+  ```
+
+---
+
+## 🤔 Далі
+
+* Кешувати конфіг `whois.php` для підвищення швидкодії.
+* Додати обробку DNS-cache та rate limiting.
+* Розширити валідацію (IDN-доменів, нові TLD).
+* Окремий PHPUnit-тест для контролера та FormRequest.
+
+---
+
+> **Автор:** команда розробки
+> **Дата:** травень 2025
+> **Ліцензія:** MIT
+
