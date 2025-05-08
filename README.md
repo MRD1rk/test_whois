@@ -44,8 +44,10 @@
    ```bash
    git clone https://github.com/MRD1rk/test_whois.git
    cd test_whois/docker
+   cp .env.example .env
    ```
 2. **Запускаємо Docker-стек**:
+
 
    ```bash
    docker-compose up -d --build
